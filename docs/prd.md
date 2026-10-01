@@ -50,7 +50,7 @@ Primary v0 setting: **family / small club**, not multi-tenant SaaS. Multi-family
 The gate has **two** parts. Latency alone is not enough.
 
 **A. Latency / no-reprocess (query path)**  
-On a warm index for **one real gold game**, parent-style queries return ranked clip ranges in **&lt;5 seconds** (p50) **without** re-reading or re-sending the **full** video through an LLM. Latency budget covers retrieve + optional short assemble, not overnight ingest.
+On a warm index for **one real gold game**, parent-style queries return ranked clip ranges in **&lt;5 seconds** (p50) **without** re-reading or re-sending the **full** video through an LLM. Latency budget covers retrieve + optional short assemble, not overnight ingest. For Path H1, **vendor Search API time is included** in that &lt;5s budget.
 
 **B. Quality — minimal eval protocol (same gold game)**  
 Before calling H1 or H2 a bake-off winner, run this protocol:
@@ -67,7 +67,17 @@ Before calling H1 or H2 a bake-off winner, run this protocol:
 | Pass bar (provisional) | A path **passes** only if it meets **all** of: (1) latency gate A, (2) **Precision@5 ≥ 0.4**, (3) **key-play recall ≥ 0.5**, on the same gold game and query set. Bars are starting thresholds — Leo may raise them after the first eval. |
 | H1 vs H2 | Run the **same** gold game, query set, and judges on both paths. Prefer the path that passes with higher Precision@5 then higher recall; if only one passes, that path is the provisional MVP experiment choice. If neither passes, document failures and iterate (tags, chunking, prompts) — do **not** lock a vendor. |
 
-**H1 privacy precondition (must match ADR-0002):** do **not** run the H1 (managed vendor index, e.g. TwelveLabs) bake-off on team footage until Leo confirms consent / club rules for uploading video that includes **other minors** (teammates and opponents visible in the recording) to that vendor — see §6. H2 may proceed on an owned / on-premises stack under family-operator controls without that vendor-upload step. Face biometrics remain out of scope for minors on both paths.
+**H1 privacy precondition (blocking — mirrors ADR-0002):** Before uploading youth / HS / club game video containing minors to TwelveLabs (or any managed multimodal index) for Path H1, the operator must record a decision log that verifies, against current vendor terms/docs (and counsel if needed):
+
+1. **Retention** — how long indexed video and derived artifacts remain; deletion / purge path after bake-off or season end.
+2. **Training-use / model improvement** — whether the vendor may use customer content to train or improve models; contractual opt-out or prohibition if required.
+3. **Geo / data residency** — where video is processed and stored relative to family/club constraints.
+
+Until that log is complete, H1 on **real youth footage is blocked**. Dry runs may use synthetic or public-domain video only. Separately, confirm club/parental consent for processing footage that includes **other minors** (teammates/opponents) — see §6 / §8.
+
+**Regardless of H1:** authoritative originals stay under operator control (NAS / R2 / B2); the vendor Search index is not the system of record for originals. Portable export/reindex of embeddings (if any) remains a follow-up per ADR-0003. Face biometrics remain out of scope for minors on both paths. H2 may proceed on an owned / on-premises stack under family-operator controls without the vendor-upload decision log.
+
+**H1 latency note:** when H1 is the retrieve path, **vendor Search API latency counts toward the &lt;5s success gate** (gate A).
 
 ### Supporting signals (v0)
 
@@ -124,7 +134,7 @@ The research brief’s coherent MVP **experiment** stack (FFmpeg fixed chunks; T
 | Teammate / club consent | Even without face biometrics, **processing and (for H1) uploading** full-game video of other minors may require club/school consent or parental agreement. **Open question for Leo** — see §8. Do not start H1 vendor upload until answered. |
 | Consent / sharing | Prefer private family (or small trusted) access until Leo decides public/share links. |
 | Data residency / school rules | Open question — may restrict where originals live and which vendors may receive copies. |
-| Vendor AI (H1) | **Precondition (ADR-0002):** document what leaves the premises, retention, and subprocessors; keep authoritative originals under operator control. H1 bake-off is blocked until Leo confirms teammate/minor consent / club rules for vendor upload. |
+| Vendor AI (H1) | **Blocking precondition (ADR-0002):** decision log covering **retention**, **training-use / model improvement**, and **geo / data residency** before any real youth footage upload to TwelveLabs (or similar). Until complete, H1 on real youth footage is blocked (synthetic/public-domain dry runs only). Originals remain under operator control; vendor index is not system of record. Also require teammate/other-minors consent answer (§8). |
 | Owned stack (H2) | Prefer keeping bytes and embeddings under operator control for the bake-off when consent for vendor upload is unclear. |
 
 ---
@@ -151,7 +161,8 @@ Prioritized from the research brief’s closing list. Answers unstick bake-offs 
 4. **Delivery UX** — Stream-in-browser required on day 1, or is downloadable MP4 / timestamp list enough?
 5. **Privacy / face biometrics** — Confirm face biometrics remain off-limits for minors in v0; any school/club rules or residency constraints on where minor athlete video may live?
 5b. **Teammate / other-minors consent** — Team footage includes other minors. What club/school/parental consent (if any) is required to (a) process teammates’ video locally, and (b) upload full games to a managed AI vendor (H1 / TwelveLabs) even when face biometrics are unused? Who can approve that for bake-off?
-5c. **H1 go/no-go** — Explicit yes/no to run H1 vendor indexing on a gold game that shows teammates/opponents, after 5b is answered.
+5c. **H1 vendor decision log (blocking)** — Retention period + purge path; training-use / model-improvement (and any opt-out); geo / data residency — verified against current TwelveLabs (or chosen vendor) terms before real youth footage upload (see §4 H1 privacy precondition / ADR-0002).
+5d. **H1 go/no-go** — Explicit yes/no to run H1 vendor indexing on a gold game that shows teammates/opponents, only after 5b and 5c are recorded.
 6. **Taxonomy** — Who defines play types (shot/make/miss, rebound, steal, …)? Any existing Hudl/stat tags to reuse?
 7. **Multi-tenant timeline** — Family-only this season, or whole club?
 8. **Model ownership** — Comfort with TwelveLabs lock-in/infra fees vs DIY GPU time for an owned index?
@@ -179,5 +190,6 @@ Prioritized from the research brief’s closing list. Answers unstick bake-offs 
 |------|--------|--------|
 | 2026-10-01 | Tech Writer | Initial draft from research brief + Architect guidance; stack framed as experiment only. |
 | 2026-10-01 | Tech Writer | Code Reviewer patch: §4 eval protocol (Precision@5, key-play recall, judges, H1/H2 pass bar); §6 teammate-minors consent + H1 vendor precondition aligned with ADR-0002. |
+| 2026-10-01 | Tech Writer | Mirror Architect ADR-0002 canonical H1 privacy precondition (retention / training-use / geo; blocking); H1 Search latency counts toward &lt;5s gate. |
 
 *End of PRD draft. Stack decisions remain unlocked pending bake-offs and Leo’s answers above.*
