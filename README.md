@@ -10,6 +10,16 @@ After that, any user can generate custom highlight reels on demand — by player
 
 This design eliminates redundant heavy compute while giving parents, coaches, and players flexible, personalized access to the footage.
 
+## Documentation
+
+Working drafts for the MVP experiment live under [`docs/`](docs/README.md):
+
+- [Product requirements (PRD)](docs/prd.md)
+- [Architecture overview](docs/architecture.md)
+- [Architecture Decision Records](docs/adrs/) (ingest, embeddings, vector store, blobs, runtime)
+
+Stack choices in those docs are **Proposed** bake-off starting points (options → recommendation → open questions), not locked production decisions.
+
 ## Core Concept
 
 1. **Ingest once** — Upload a full game video.
