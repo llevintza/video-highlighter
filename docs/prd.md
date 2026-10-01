@@ -45,25 +45,39 @@ Primary v0 setting: **family / small club**, not multi-tenant SaaS. Multi-family
 
 ## 4. Success metrics
 
-### MVP success gate (must-pass)
+### MVP success gate (must-pass — latency + quality)
 
-On **one real game**, a parent-style query such as:
+The gate has **two** parts. Latency alone is not enough.
 
-> “show #12 defense in the second half”
+**A. Latency / no-reprocess (query path)**  
+On a warm index for **one real gold game**, parent-style queries return ranked clip ranges in **&lt;5 seconds** (p50) **without** re-reading or re-sending the **full** video through an LLM. Latency budget covers retrieve + optional short assemble, not overnight ingest.
 
-returns **useful clips** in **&lt;5 seconds** from the index **without** re-reading or re-sending the **full** video through an LLM.
+**B. Quality — minimal eval protocol (same gold game)**  
+Before calling H1 or H2 a bake-off winner, run this protocol:
 
-Latency budget applies to the **query path** (retrieve + optional short assemble), not overnight ingest.
+| Step | What |
+|------|------|
+| Gold game | One representative youth/HS/club game under private access (same file for both paths). |
+| Key-play labels | Before scoring: Leo and/or a coach pre-mark a set of **key plays** (time ranges + play-type / player tags) on that game — the recall ground truth. |
+| Query set | **N ≥ 10** labeled parent-style queries (written before scoring), covering NL + filter style (player, play type, period). Example: “show #12 defense in the second half”. |
+| Top-K | System returns **K = 5** clip ranges per query. |
+| Judges | **Leo and/or coach** (named on the eval sheet). Judges mark each returned clip as relevant / not for that query. |
+| Precision@5 | Fraction of the K=5 clips judged relevant, averaged over the N queries. |
+| Key-play recall | Fraction of pre-marked key plays that appear in at least one top-K result for a query that should retrieve them (document mapping rules on the eval sheet). |
+| Pass bar (provisional) | A path **passes** only if it meets **all** of: (1) latency gate A, (2) **Precision@5 ≥ 0.4**, (3) **key-play recall ≥ 0.5**, on the same gold game and query set. Bars are starting thresholds — Leo may raise them after the first eval. |
+| H1 vs H2 | Run the **same** gold game, query set, and judges on both paths. Prefer the path that passes with higher Precision@5 then higher recall; if only one passes, that path is the provisional MVP experiment choice. If neither passes, document failures and iterate (tags, chunking, prompts) — do **not** lock a vendor. |
 
-### Supporting signals (qualitative for v0)
+**H1 privacy precondition (must match ADR-0002):** do **not** run the H1 (managed vendor index, e.g. TwelveLabs) bake-off on team footage until Leo confirms consent / club rules for uploading video that includes **other minors** (teammates and opponents visible in the recording) to that vendor — see §6. H2 may proceed on an owned / on-premises stack under family-operator controls without that vendor-upload step. Face biometrics remain out of scope for minors on both paths.
+
+### Supporting signals (v0)
 
 | Signal | Intent |
 |--------|--------|
-| Query latency | p50 retrieve &lt;5 s from warm index (success gate). |
-| Relevance | Parent/coach rates returned clips as “useful” for the asked intent (false positives preferred over missing big plays only if Leo sets that bar—see open questions). |
+| Query latency | p50 retrieve &lt;5 s from warm index (gate A). |
+| Precision@5 / key-play recall | Gate B on the gold-game eval sheet. |
 | Reprocess avoidance | Same game answers N follow-up queries with **no** second full-video AI pass. |
 | Player filter usability | “My kid” works via roster + manual tags even if jersey OCR is weak. |
-| Privacy | No face-biometric pipeline enabled for minors in v0. |
+| Privacy | No face-biometric pipeline for minors in v0; H1 vendor upload gated on teammate/minor consent (§6 / ADR-0002). |
 
 Quantitative season-1 cost/usage targets depend on Leo’s budget ceiling (open question).
 
@@ -104,12 +118,14 @@ The research brief’s coherent MVP **experiment** stack (FFmpeg fixed chunks; T
 
 | Constraint | Requirement |
 |------------|-------------|
-| Minors | Treat athletes as minors by default for youth/HS footage. |
+| Minors | Treat athletes as minors by default for youth/HS footage. Team recordings typically include **other minors** (teammates, opponents, bystanders), not only the operator’s child. |
 | Face biometrics | **Out of scope for v0** — do not ship face recognition / face match for player ID. |
 | Player ID | Roster + manual tags first; jersey OCR best-effort only. |
+| Teammate / club consent | Even without face biometrics, **processing and (for H1) uploading** full-game video of other minors may require club/school consent or parental agreement. **Open question for Leo** — see §8. Do not start H1 vendor upload until answered. |
 | Consent / sharing | Prefer private family (or small trusted) access until Leo decides public/share links. |
-| Data residency / school rules | Open question — may restrict where originals live. |
-| Vendor AI | If using managed indexes (e.g. TwelveLabs), document what video leaves the premises and retention; prefer portable originals always kept under operator control. |
+| Data residency / school rules | Open question — may restrict where originals live and which vendors may receive copies. |
+| Vendor AI (H1) | **Precondition (ADR-0002):** document what leaves the premises, retention, and subprocessors; keep authoritative originals under operator control. H1 bake-off is blocked until Leo confirms teammate/minor consent / club rules for vendor upload. |
+| Owned stack (H2) | Prefer keeping bytes and embeddings under operator control for the bake-off when consent for vendor upload is unclear. |
 
 ---
 
@@ -118,10 +134,10 @@ The research brief’s coherent MVP **experiment** stack (FFmpeg fixed chunks; T
 1. **Upload** a game file (home after the game is enough for v0; gym Wi-Fi upload is an open ops question).
 2. **Ingest job** runs offline/batch (minutes to hours) → proxy + chunks + index/metadata.
 3. **Human tags** (optional but expected early): confirm “my kid” / key plays as needed.
-4. **Query** via CLI or thin API: NL and/or filters → ranked time ranges in &lt;5 s.
+4. **Query** via CLI or thin API: NL and/or filters → ranked time ranges (must meet §4 gate A latency and gate B quality on the gold-game eval).
 5. **Assemble** short reel (1–10 min target class) → downloadable MP4 and/or signed URL; streaming polish optional later.
 
-Delivery UX (in-browser stream vs download MP4) is an open question for Leo; either is acceptable if the success gate holds.
+Delivery UX (in-browser stream vs download MP4) is an open question for Leo; either is acceptable if the §4 success gate (latency **and** quality) holds.
 
 ---
 
@@ -133,7 +149,9 @@ Prioritized from the research brief’s closing list. Answers unstick bake-offs 
 2. **Budget ceiling** — Soft monthly cap for AI + hosting in season 1 (~$20 vs ~$200 vs ~$2,000)?
 3. **Player ID bar** — Is manual roster tagging acceptable for v0 “my daughter only” filters?
 4. **Delivery UX** — Stream-in-browser required on day 1, or is downloadable MP4 / timestamp list enough?
-5. **Privacy** — Confirm face biometrics remain off-limits; any school/club rules or residency constraints on where minor athlete video may live?
+5. **Privacy / face biometrics** — Confirm face biometrics remain off-limits for minors in v0; any school/club rules or residency constraints on where minor athlete video may live?
+5b. **Teammate / other-minors consent** — Team footage includes other minors. What club/school/parental consent (if any) is required to (a) process teammates’ video locally, and (b) upload full games to a managed AI vendor (H1 / TwelveLabs) even when face biometrics are unused? Who can approve that for bake-off?
+5c. **H1 go/no-go** — Explicit yes/no to run H1 vendor indexing on a gold game that shows teammates/opponents, after 5b is answered.
 6. **Taxonomy** — Who defines play types (shot/make/miss, rebound, steal, …)? Any existing Hudl/stat tags to reuse?
 7. **Multi-tenant timeline** — Family-only this season, or whole club?
 8. **Model ownership** — Comfort with TwelveLabs lock-in/infra fees vs DIY GPU time for an owned index?
@@ -160,5 +178,6 @@ Prioritized from the research brief’s closing list. Answers unstick bake-offs 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-10-01 | Tech Writer | Initial draft from research brief + Architect guidance; stack framed as experiment only. |
+| 2026-10-01 | Tech Writer | Code Reviewer patch: §4 eval protocol (Precision@5, key-play recall, judges, H1/H2 pass bar); §6 teammate-minors consent + H1 vendor precondition aligned with ADR-0002. |
 
 *End of PRD draft. Stack decisions remain unlocked pending bake-offs and Leo’s answers above.*
