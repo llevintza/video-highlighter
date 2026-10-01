@@ -35,7 +35,7 @@ Leo’s product targets **youth / high-school / club basketball** game recording
 
 ### Privacy posture
 
-Family and youth athlete video. Prefer **portable authoritative originals** (NAS / R2 / B2 you control). **Defer face biometrics for minors.** Player identity for MVP = roster + **manual tags**; jersey OCR is best-effort metadata with confidence only.
+Family and youth athlete video. Prefer **portable authoritative originals** (NAS / R2 / B2 you control). **Defer face biometrics for minors.** Player identity for MVP = roster + **manual tags**; jersey OCR is best-effort metadata with confidence only. Access: **private-by-default** in v0 (see [v0 auth / access defaults](#v0-auth--access-defaults-proposed)).
 
 ---
 
@@ -107,11 +107,19 @@ games(
   ingest_status, model_bundle_version, created_at
 )
 
+period_markers(                 -- provisional v0: manual operator ranges
+  id, game_id,
+  label,                        -- Q1 | Q2 | Q3 | Q4 | halftime | OT | first_half | second_half
+  start_ms, end_ms,             -- wall-clock or video timestamps
+  recorded_by, created_at
+)
+
 chunks(
   id, game_id, start_ms, end_ms,
-  embedding,                    -- or external vector id
+  embedding,                    -- or external vector id (H2); H1 may be vendor search id
   play_types[],                 -- proposed + human-corrected
   player_numbers[],             -- OCR guesses and/or manual
+  period, half,                 -- inherited by overlap with period_markers (v0 manual; not ML)
   ocr_text, caption_text,
   confidence, model_version,
   source_path                   -- H1 vendor id vs H2 local
@@ -142,6 +150,8 @@ exports(                        -- optional cache of assembled reels
 
 **Clip strategy:** Prefer storing **original + proxy** and generating/caching clips **on demand** over materializing every combinatorial reel.
 
+**Period / half filters (v0):** Queries like “second half” rely on **manual period/half markers** recorded at ingest (or shortly after). Chunks inherit `period` / `half` by overlapping those ranges — SQL/payload filter, no ML period detection in v0. Auto-derivation (scoreboard OCR / silence / clock) is **out of v0**. Detail: [ADR-0001](./adrs/0001-ingest-and-chunking.md#provisional-v0-period--half-markers-manual).
+
 ---
 
 ## Query path latency budget (toward &lt;5 s gate)
@@ -159,7 +169,24 @@ Budget is for **index → useful clip list** (and optionally kick off assemble).
 
 **Anti-pattern:** Sending the full 1–2 h video (or all chunks) through Gemini/OpenAI at query time. Generative video understanding belongs on the **ingest** path only (batch captions/tags).
 
+**Path-specific note (H1 vs H2):** On **H1**, the searchable index may be **vendor-hosted** (TwelveLabs Search). **Vendor Search API latency counts toward the &lt;5 s success gate** (retrieve path). Export/reindex of embeddings into an owned store remains a follow-up ([ADR-0003](./adrs/0003-vector-and-metadata-store.md)); do not imply H1 already owns portable vectors unless export is verified. On **H2**, vectors live in Postgres/pgvector (or Qdrant) from day one of that path.
+
 ---
+
+## v0 auth / access defaults (Proposed)
+
+Youth/family video → **private-by-default**. These are provisional MVP defaults until Leo confirms multi-user needs.
+
+| Default | v0 posture |
+|---------|------------|
+| Visibility | **Private-by-default** — family/operator only |
+| Public share links | **None in v0** — no unauthenticated clip pages |
+| Clip delivery | **Signed URL TTL** — provisional default **30 minutes** (Proposed; acceptable band 15–60 minutes) |
+| Who uploads | **Operators** (single operator/family account) |
+| Who queries | Same trusted principals as uploaders |
+| Multi-user / club IAM | **Deferred** — not a v0 requirement |
+
+Uploaders = operators; query = the same trusted principals. Broader coach/parent accounts and org IAM wait until the &lt;5 s gate is proven.
 
 ## Non-goals for MVP experiment
 
@@ -181,14 +208,16 @@ Run on **2–3 real games** (ideally Leo’s footage), same prompts, same human 
 
 ### Path H1 — speed / managed index
 
-1. Index full games with **TwelveLabs** Search (sports vertical noted by vendor).
+1. Index full games with **TwelveLabs** Search (sports vertical noted by vendor). The searchable index for H1 may be **vendor-hosted**.
 2. Measure recall/precision for prompts like “steals”, “three-pointers”, “#12 layup” on *amateur* angles.
 3. Track Developer-plan costs: indexing ~**$2.50 / hour** one-time + infra ~**$0.09 / hour / month** indexed + search ~**$4 / 1k queries** (~2026-10-01 list). Illustrative: 100-min game ≈ $4.17 index + ~$0.15/mo infra.
-4. Verify Embed API export/retention if you need durable self-hosted vectors later.
+4. **Include TwelveLabs Search API latency in the &lt;5 s retrieve success gate** — vendor RTT is on the critical path for H1.
+5. Verify Embed API export/retention if you need durable self-hosted vectors later; until verified, do **not** treat H1 as owning portable vectors. Export/reindex into an owned store is a follow-up ([ADR-0003](./adrs/0003-vector-and-metadata-store.md)).
+6. **Blocking privacy gate** before any real youth/HS/club footage upload: record retention, training-use / model improvement, and geo / data residency answers against current vendor terms/docs (decision log). Synthetic/public-domain footage only for dry runs until the log is complete. Detail: [ADR-0002](./adrs/0002-moment-detection-and-embeddings.md). Authoritative originals remain under operator control (NAS / R2 / B2) regardless of H1.
 
 ### Path H2 — owned index
 
-1. FFmpeg chunks → **SigLIP2** (or **InternVideo2** if VRAM allows) embeddings into your vector store.
+1. FFmpeg chunks → **SigLIP2** (or **InternVideo2** if VRAM allows) embeddings into **your** vector store (Postgres/pgvector or Qdrant) from day one of this path.
 2. Batch **Gemini Flash** (or similar) at ingest for play-type proposals + jersey guesses → metadata.
 3. Human correct once via roster tags.
 4. Optional: cloud Video Intelligence / Rekognition / Azure Video Indexer **only** as OCR/shot helpers — watch stacked **$/min** (e.g. GCP label+OCR+person ≈ **$0.35+/min** → ~$35+ per 100-min game after free tier; ~2026-10-01).
@@ -233,6 +262,7 @@ Prioritized from the research brief:
 10. **Clip accuracy** — Keyframe-snapped vs frame-accurate re-encode acceptable?
 11. **Retention** — Keep every game forever, or rolling N seasons?
 12. **Upload path** — Parent phone from gym Wi-Fi vs home after game? Local NVIDIA GPU available overnight?
+13. **Auth defaults** — Confirm private-by-default, no public share links in v0, and signed URL TTL (Proposed: 30 minutes within 15–60)?
 
 ---
 
@@ -243,4 +273,4 @@ Prioritized from the research brief:
 - Product ideation: [github.com/llevintza/video-highlighter](https://github.com/llevintza/video-highlighter)
 - Vendor pricing / docs cited in ADRs (snapshots ~2026-10-01)
 
-*PRD (`prd.md`) is owned by Tech Writer and may arrive later.*
+Companion PRD: [prd.md](./prd.md) (owned by Tech Writer).

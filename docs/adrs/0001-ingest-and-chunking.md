@@ -76,6 +76,19 @@ Store absolute timestamps against the **original**. Use Mux or Cloudflare Stream
 
 Prefer generating/caching clips on demand over materializing every reel.
 
+
+## Provisional v0: period / half markers (manual)
+
+Parent-style queries such as “second half” or “Q3” need a **period / half filter** on chunks. In v0 there is **no** automatic period derivation (no scoreboard OCR, silence detection, or game-clock ML). Do not pretend those exist yet.
+
+**Provisional path (at ingest or shortly after):**
+
+1. An operator records **manual period/half markers** as metadata ranges on the game — wall-clock or video timestamps for period starts/ends (e.g. Q1–Q4, halftime, OT). Store these as ranges on `games` (or a related `period_markers` table), not as inferred labels.
+2. Chunks **inherit** `period` / `half` by **overlapping** those marker ranges (SQL or payload filter on metadata). Parent queries then filter without ML period detection.
+3. **Out of v0 (optional later):** derive periods from scoreboard OCR, silence gaps, or visible game clock — evaluate only after the manual path works on real footage.
+
+This keeps example queries like “#12 defense in the second half” honest: the filter works because markers were recorded, not because the system “knows” halves by itself.
+
 ## Rationale
 
 Youth games are long continuous recordings—scene detectors designed for edited video under-segment. Owning time ranges preserves the product vision and avoids binding the index to a vendor’s clip IDs. Fixed temporal windows give predictable embed cardinality (~500–3,000 chunks/game depending on window size). Optional AdaptiveDetector helps only where real cuts exist.
@@ -93,6 +106,7 @@ Youth games are long continuous recordings—scene detectors designed for edited
 - DIY reliability: packaging workers, monitoring, corrupt uploads, variable phone codecs
 - Keyframe snap vs re-encode tradeoff on clip edges
 - If day-1 streaming UX is mandatory, FFmpeg alone does not replace Mux/Stream player polish
+- Period/half filters in v0 depend on operator-entered markers; missing markers → those filters return empty or unscoped results
 
 **Neutral**
 
@@ -105,6 +119,8 @@ Youth games are long continuous recordings—scene detectors designed for edited
 3. Acceptable clip accuracy: keyframe-snapped (~±1–2 s) vs frame-accurate re-encode?
 4. Will originals stay private (family-only) forever, or is sharing/public links planned?
 5. Preferred fixed window length (4 vs 6 vs 8 s) after bake-off recall tests?
+
+6. Who enters period/half markers in v0 (operator at ingest vs coach after upload), and is marker granularity Q1–Q4 + OT enough?
 
 ## References
 

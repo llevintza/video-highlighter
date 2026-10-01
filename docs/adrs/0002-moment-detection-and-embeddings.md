@@ -75,13 +75,23 @@ Commercial auto-highlight systems (Hudl autogen, Pixellot, WSC Sports) are tuned
 
 **Hybrid bake-off on 2–3 real games:**
 
-1. **Path H1 (speed):** TwelveLabs Search index on full games → measure recall for prompts like “steals”, “three-pointers”, “#12 layup” on *your* footage; track monthly infra vs quality.
-2. **Path H2 (owned index):** FFmpeg chunks → **SigLIP2** (or **InternVideo2** if GPU allows) embeddings into your vector DB + **batch Gemini Flash** (or similar) to propose play-type tags + jersey guesses into metadata → human correct once.
+1. **Path H1 (speed):** TwelveLabs Search index on full games (vendor-hosted searchable index) → measure recall for prompts like “steals”, “three-pointers”, “#12 layup” on *your* footage; track monthly infra vs quality; **include Search API latency in the &lt;5 s retrieve gate**. Subject to the **H1 privacy precondition** below before any real youth footage upload.
+2. **Path H2 (owned index):** FFmpeg chunks → **SigLIP2** (or **InternVideo2** if GPU allows) embeddings into **your** vector store (Postgres/pgvector or Qdrant) from day one of this path + **batch Gemini Flash** (or similar) to propose play-type tags + jersey guesses into metadata → human correct once.
 3. Keep cloud Video Intelligence / Rekognition / Azure Video Indexer as **optional OCR/shot helpers**, not the primary brain—watch stacked $/min.
 
 **Player ID for MVP:** Roster CSV (number → name) + **human confirmation** of key clips; jersey OCR as best-effort with confidence scores. **Defer face recognition for minors** until legal/product review.
 
 Do **not** assume CLIP alone solves basketball semantics; do **not** assume NBA-trained action models transfer to phone video without evaluation. Do **not** call full-video LLMs at query time (breaks the &lt;5 s / no-reprocess gate).
+
+
+**H1 privacy precondition (blocking):** Before uploading youth / HS / club game video containing minors to TwelveLabs (or any managed multimodal index) for Path H1, the operator must record a decision log that verifies, against current vendor terms/docs (and counsel if needed):
+1. **Retention** — how long indexed video and derived artifacts remain; deletion / purge path after bake-off or season end.
+2. **Training-use / model improvement** — whether the vendor may use customer content to train or improve models; contractual opt-out or prohibition if required.
+3. **Geo / data residency** — where video is processed and stored relative to family/club constraints.
+Until that log is complete, H1 on **real youth footage is blocked**. Dry runs may use synthetic or public-domain video only.
+**Regardless of H1:** authoritative originals stay under operator control (NAS / R2 / B2); the vendor Search index is not the system of record for originals. Portable export/reindex of embeddings (if any) remains a follow-up per ADR-0003.
+
+**H1 index vs &lt;5 s gate:** For Path H1 the searchable index may be **vendor-hosted** (TwelveLabs Search). **Vendor Search API latency counts toward the &lt;5 s success gate** on the retrieve path. Do not imply H1 already owns portable vectors unless Embed API export is verified; owned portable vectors are the H2 default (Postgres/pgvector or Qdrant) and an H1 follow-up only after export (see ADR-0003).
 
 ## Rationale
 
@@ -98,6 +108,8 @@ Quality on amateur HS video is an empirical question. H1 minimizes time-to-signa
 **Negative / risks**
 
 - H1: monthly infra while indexed; embed export policies need verification
+- H1 on real youth footage is **blocked** until the privacy decision log (retention, training-use, geo/residency) is recorded against current TwelveLabs terms/docs
+- H1 Search API RTT is on the critical path for the &lt;5 s gate; slow vendor search fails the gate even if local filters are fast
 - H2: GPU ops, labeling UX, possible weaker sports semantics until tuned
 - OCR false confidence can mislead parents if shown without scores
 - Dual-path experiments cost calendar time and some $
@@ -114,6 +126,9 @@ Quality on amateur HS video is an empirical question. H1 minimizes time-to-signa
 4. Hard privacy constraints confirmed (no face biometrics for minors; region data residency)?
 5. Acceptable false-positive rate for parent reels (extra dull clips vs missing a big play)?
 6. Preference: TwelveLabs lock-in comfort vs DIY GPU time / budget?
+
+7. **Before H1 youth upload (blocking checklist):** What do current TwelveLabs terms/docs say about retention/deletion, training-use / model improvement (and any opt-out), and geo / data residency? Record answers in the decision log — do not assume.
+8. After bake-off: is Embed API export verified enough to treat H1 vectors as portable, or does reindex into owned store (ADR-0003) remain required?
 
 ## References
 
