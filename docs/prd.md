@@ -89,7 +89,7 @@ Until that log is complete, H1 on **real youth footage is blocked**. Dry runs ma
 | Player filter usability | “My kid” works via roster + manual tags even if jersey OCR is weak. |
 | Privacy | No face-biometric pipeline for minors in v0; H1 vendor upload gated on teammate/minor consent (§6 / ADR-0002). |
 
-Quantitative season-1 cost/usage targets depend on Leo’s budget ceiling (open question).
+Quantitative season-1 cost/usage targets: Architect **CoS provisional default (2026-10-02)** is Family H2 year-one cash **~$50–150** ([cost-framing.md](./cost-framing.md)); Club monthly bands are out of season-1 scope. Stack remains unlocked.
 
 ---
 
@@ -156,7 +156,7 @@ Delivery UX (in-browser stream vs download MP4) is an open question for Leo; eit
 Prioritized from the research brief’s closing list. Answers unstick bake-offs and ADR confirmation.
 
 1. **Footage access** — Can Architect / implementers get 1–2 representative full games (length, resolution, angle) under private access for H1 vs H2 bake-offs?
-2. **Budget ceiling** — Soft monthly cap for AI + hosting in season 1 (~$20 vs ~$200 vs ~$2,000)?
+2. **Budget ceiling** — **CoS provisional default (2026-10-02; Architect).** Active season-1 envelope = Family H2 year-one cash **~$50–150**. Club bands (~$200 soft monthly / ~$2k monthly) are future scenarios only — not season-1 targets. Detail: [cost-framing.md](./cost-framing.md) / [ADR-0005](./adrs/0005-runtime-and-hosting.md).
 3. **Player ID bar** — Is manual roster tagging acceptable for v0 “my daughter only” filters?
 4. **Delivery UX** — Stream-in-browser required on day 1, or is downloadable MP4 / timestamp list enough?
 5. **Privacy / face biometrics** — Confirm face biometrics remain off-limits for minors in v0; any school/club rules or residency constraints on where minor athlete video may live?
@@ -169,7 +169,7 @@ Prioritized from the research brief’s closing list. Answers unstick bake-offs 
 9. **Source media** — Typical format/size (phone vs camcorder; 1080p60 vs 4K; average GB/game)?
 10. **Clip accuracy** — Keyframe-snapped (~±1–2 s) OK, or frame-accurate re-encode required?
 11. **False-positive preference** — Extra dull clips vs missing a big play?
-12. **Local GPU** — Is a home NVIDIA GPU available for overnight ingest jobs?
+12. **Local GPU** — **CoS provisional default (2026-10-02; Architect).** Plan **Modal-first** until `xoondev001` is online and `nvidia-smi` confirms a usable GPU. Prefer home NVIDIA if/when found (including on `xoondev001` or another home box). Modal/RunPod remain the burst path; never always-on cloud GPU. See [ADR-0005](./adrs/0005-runtime-and-hosting.md).
 
 ---
 
@@ -191,5 +191,6 @@ Prioritized from the research brief’s closing list. Answers unstick bake-offs 
 | 2026-10-01 | Tech Writer | Initial draft from research brief + Architect guidance; stack framed as experiment only. |
 | 2026-10-01 | Tech Writer | Code Reviewer patch: §4 eval protocol (Precision@5, key-play recall, judges, H1/H2 pass bar); §6 teammate-minors consent + H1 vendor precondition aligned with ADR-0002. |
 | 2026-10-01 | Tech Writer | Mirror Architect ADR-0002 canonical H1 privacy precondition (retention / training-use / geo; blocking); H1 Search latency counts toward &lt;5s gate. |
+| 2026-10-02 | Architect (light) | Point §4 / §8 Q2+Q12 at CoS provisional GPU + Family H2 season-1 envelope; no PRD rewrite. |
 
 *End of PRD draft. Stack decisions remain unlocked pending bake-offs and Leo’s answers above.*

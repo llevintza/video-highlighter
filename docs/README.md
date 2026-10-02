@@ -4,7 +4,7 @@ Working architecture notes for Leo’s youth/HS/club basketball **video highligh
 **Source of truth for options and cost sketches:** `/workspace/video-highlighter-research-brief.md` (prepared 2026-10-01 EDT).  
 Vendor prices cited in these docs are **~2026-10-01 snapshots** — re-verify before budgeting.
 
-> **Stack is not locked.** Every ADR and the overview frame *options → MVP experiment recommendation → rationale → consequences → open questions*. Choices are bake-off starting points, not fiat.
+> **Stack is not locked.** Every ADR and the overview frame *options → MVP experiment recommendation → rationale → consequences → open questions*. Choices are bake-off starting points, not fiat. CoS GPU + Family H2 cash defaults (2026-10-02) are **planning assumptions** until bake-off Accept.
 
 ## Documents
 
@@ -12,6 +12,7 @@ Vendor prices cited in these docs are **~2026-10-01 snapshots** — re-verify be
 |------|----------------|--------|
 | [architecture.md](./architecture.md) | Architect (draft) | Living overview |
 | [adrs/](./adrs/) | Architect (draft); Leo confirms after bake-off | All ADRs **Proposed** |
+| [cost-framing.md](./cost-framing.md) | Architect (draft) | CoS season-1 envelope (provisional, 2026-10-02) |
 | [prd.md](./prd.md) | Tech Writer (draft) | Ready for Architect alignment |
 
 ## ADR index

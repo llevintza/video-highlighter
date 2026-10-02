@@ -17,6 +17,7 @@ Working drafts for the MVP experiment live under [`docs/`](docs/README.md):
 - [Product requirements (PRD)](docs/prd.md)
 - [Architecture overview](docs/architecture.md)
 - [Architecture Decision Records](docs/adrs/) (ingest, embeddings, vector store, blobs, runtime)
+- [Season-1 cost framing](docs/cost-framing.md) (provisional CoS defaults)
 
 Stack choices in those docs are **Proposed** bake-off starting points (options → recommendation → open questions), not locked production decisions.
 

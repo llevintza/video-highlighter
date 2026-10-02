@@ -3,6 +3,7 @@
 - Status: Proposed
 - Date: 2026-10-01
 - Deciders: Architect (draft); Leo to confirm after bake-off
+- CoS provisional defaults: 2026-10-02 (planning assumptions; stack still **Proposed**, not Accepted)
 
 ## Context
 
@@ -15,7 +16,7 @@ Workloads have opposite shapes:
 
 Co-locating both on one home box is fine for a private MVP **if** the *design* still separates planes (queue-driven ingest vs always-on API). Always-on cloud GPUs are an anti-pattern for this product.
 
-**Stack is not locked.** Home GPU vs Modal/RunPod vs hyperscaler is an experiment starting point driven by Leo’s hardware and monthly budget.
+**Stack is not locked.** Home GPU vs Modal/RunPod vs hyperscaler remains an experiment; options A–D below stay on the table until bake-off Accept. **CoS provisional default (2026-10-02):** plan **Modal-first** ingest until host `xoondev001` is online and `nvidia-smi` confirms a usable GPU. Prefer **home NVIDIA** if/when found (including on `xoondev001` or another home box). Keep Modal/RunPod as the burst path — never always-on cloud GPU.
 
 ## Decision drivers
 
@@ -51,6 +52,8 @@ Co-locating both on one home box is fine for a private MVP **if** the *design* s
 - Hosting burden shifts to vendor; app is mostly auth + UX + vendor AI APIs.
 - Conflicts with “own the embedding index forever” unless a side index still runs.
 
+**MVP experiment starting point (not a lock):** start on **B with Modal-first** burst GPU until a home NVIDIA is confirmed. **A is preferred** when `xoondev001` (or another home box) shows a usable GPU via `nvidia-smi`. C–D remain future/alternate paths.
+
 ### Cost intuition (illustrative, ~2026-10-01)
 
 | Path | Ingest 100-min game | Always-on API | Notes |
@@ -60,6 +63,8 @@ Co-locating both on one home box is fine for a private MVP **if** the *design* s
 | TwelveLabs index instead of DIY GPU | ~$4.17 + infra | Thin API | Shifts cost to vendor AI (see ADR-0002) |
 | Always-on cloud GPU | Wasteful | Avoid | Anti-pattern |
 
+Season-1 planning band (CoS 2026-10-02): Family H2 year-one cash **~$50–150**; Modal ~$30/mo credits as primary ingest until a home GPU is confirmed. Club monthly bands are out of season-1 scope — [../cost-framing.md](../cost-framing.md).
+
 ## Recommendation (MVP experiment — not lock-in)
 
 **Split planes early in design (even if co-located on one box at first):**
@@ -67,7 +72,9 @@ Co-locating both on one home box is fine for a private MVP **if** the *design* s
 1. **Ingest worker** — queue-driven (e.g. SQS / Redis / Cloud Tasks / simple DB `jobs` table); scale to zero; GPU when needed; writes blobs + index.
 2. **Query API** — small always-on service returning timestamps + signed clip URLs; assemble via FFmpeg job (or Stream/Mux clip APIs). Do **not** re-send full video through an LLM on the query path.
 
-**MVP runtime starting point:** Home GPU **or** one cheap GPU cloud job runner (Modal/RunPod) + one small VPS (or Fly/Railway) for API + DB. Promote to hyperscaler only when multi-user reliability demands it. Prefer FFmpeg assemble/export; defer Shotstack polish until branding needs it.
+**MVP runtime starting point (CoS provisional default 2026-10-02 — not lock-in):** **Modal-first** GPU ingest until `xoondev001` is online and `nvidia-smi` confirms a usable home NVIDIA GPU. Prefer home NVIDIA when that check succeeds (including on `xoondev001` or another home box). Keep Modal/RunPod as the **burst** path; never always-on cloud GPU. Pair with one small VPS (or Fly/Railway) for API + DB. Promote to hyperscaler only when multi-user reliability demands it. Prefer FFmpeg assemble/export; defer Shotstack polish until branding needs it.
+
+**Season-1 cash envelope (CoS provisional default 2026-10-02):** size the experiment to Family H2 year-one cash **~$50–150** (Family H2 / Tier 1). Do **not** plan season-1 against Club bands (~$200 soft monthly or ~$2k monthly); those remain *future* scenarios only. Detail: [../cost-framing.md](../cost-framing.md).
 
 Frontend remains deferred; CLI/timestamp JSON can prove the thesis.
 
@@ -96,8 +103,8 @@ Cost profiles differ by an order of magnitude between overnight embed and parent
 
 ## Open questions
 
-1. Does Leo have a local NVIDIA GPU available for overnight jobs?
-2. Target monthly infra budget for the first season (order of $20 vs $200 vs $2,000)?
+1. **Home GPU (CoS provisional default 2026-10-02).** Plan **Modal-first** until host `xoondev001` is online and `nvidia-smi` confirms a usable GPU. Prefer **home NVIDIA** if/when found (including on `xoondev001` or another home box). Remaining work is host-online verification, not a re-ask.
+2. **Season-1 budget (CoS provisional default 2026-10-02).** Active envelope = Family H2 year-one cash **~$50–150** (Family H2 / Tier 1). Do **not** plan season-1 against Club bands (~$200 soft monthly or ~$2k monthly). Club figures remain future scenarios only. See [../cost-framing.md](../cost-framing.md).
 3. Who uploads (parent phone from gym Wi-Fi vs home after game)?
 4. Need multi-region or is US-East / home NAS enough?
 5. Acceptable max ingest turnaround (same night vs next morning)?
@@ -105,7 +112,8 @@ Cost profiles differ by an order of magnitude between overnight embed and parent
 ## References
 
 - Research brief §5 and closing table — `/workspace/video-highlighter-research-brief.md`
+- Season-1 envelope: [../cost-framing.md](../cost-framing.md)
+- Architecture overview: [../architecture.md](../architecture.md)
 - [RunPod GPU pricing](https://www.runpod.io/gpu-instance/pricing)
 - [RunPod vs Modal (Markaicode)](https://markaicode.com/vs/runpod-vs-modal/)
-- Architecture overview: [../architecture.md](../architecture.md)
 - Prices: snapshots ~2026-10-01

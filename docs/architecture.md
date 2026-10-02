@@ -3,6 +3,7 @@
 - **Status:** Living draft (stack unlocked)
 - **Date:** 2026-10-01
 - **Deciders:** Architect (draft); Leo to confirm after bake-off
+- **CoS provisional defaults:** 2026-10-02 (GPU + season-1 cash; still **Proposed**, not Accepted)
 - **Grounding:** `/workspace/video-highlighter-research-brief.md`; product ideation from [llevintza/video-highlighter](https://github.com/llevintza/video-highlighter) README (hypothesis only)
 
 > **Stack is not locked.** Tables and diagrams below describe a **coherent MVP experiment starting point**. Every layer has named alternatives in the ADRs. Confirm with a short bake-off on real youth/HS/club footage before treating any choice as Accepted.
@@ -74,11 +75,13 @@ The README’s “Suggested Tech Stack” (FFmpeg, PySceneDetect, CLIP-family / 
 | Player ID | Jersey OCR; team color+number; face ReID; MOT+ReID; **manual roster tags** | Roster + **manual tags** first; OCR best-effort | Minors + amateur angles; no face biometrics for MVP |
 | Vector + metadata | pgvector; Qdrant; Weaviate; Pinecone; Milvus/Zilliz; FAISS/LanceDB/Chroma | **Postgres + pgvector** (or **Qdrant** if filters hurt) | Right early scale; OSS exit — see [ADR-0003](./adrs/0003-vector-and-metadata-store.md) |
 | Blobs | R2; B2; Wasabi; S3 / GCS / Azure; local NAS | **R2 or B2** for remote; **NAS** OK for family-only | Egress-sensitive parent delivery — see [ADR-0004](./adrs/0004-blob-storage.md) |
-| Runtime | Home GPU; VPS + Modal/RunPod/Vast; hyperscaler batch; Mux/Stream-centric | **Queue + GPU worker** + **tiny always-on API** | Separate cost profiles — see [ADR-0005](./adrs/0005-runtime-and-hosting.md) |
+| Runtime | Home GPU; VPS + Modal/RunPod/Vast; hyperscaler batch; Mux/Stream-centric | **Modal-first** GPU ingest until `xoondev001` / `nvidia-smi` confirms a home GPU; prefer home NVIDIA when found; **tiny always-on API**; never always-on cloud GPU | Family H2 ~$50–150 year-1 cash — see [ADR-0005](./adrs/0005-runtime-and-hosting.md), [cost-framing.md](./cost-framing.md) |
 | Assemble | FFmpeg cut/concat; Mux/Stream clip APIs; Shotstack polish | FFmpeg → signed URL; defer Shotstack | Avoid $/output-minute until branding needs it |
 | Frontend | Full Next.js app vs CLI / timestamp JSON | **Deferred** | README already deprioritizes UI; prove the gate first |
 
 **Cost intuition (illustrative, brief ~2026-10-01):** TwelveLabs Developer Search indexing ~$2.50/hour indexed (~$4.17 for a 100-min game) + ~$0.09/hour/month infra; cloud label stacks can hit ~$0.35+/min; home/DIY GPU ingest is near-zero marginal $; R2 storage ~$0.015/GB-month with free egress; parent streaming egress on S3-class can dominate. Re-verify vendor pages before budgeting.
+
+**Season-1 envelope (CoS provisional default 2026-10-02):** active planning band is Family H2 year-one cash **~$50–150**. Modal **~$30/mo credits** is the primary ingest budget until a home GPU is confirmed. Club bands (~$200 / ~$2k monthly) are future scenarios only. See [cost-framing.md](./cost-framing.md).
 
 ---
 
@@ -251,7 +254,7 @@ Pick H1, H2, or a hybrid **after** measuring HS/club footage quality, monthly in
 Prioritized from the research brief:
 
 1. **Footage access** — Can Architect get 1–2 full representative games (length, resolution, angle) under private access for bake-offs?
-2. **Budget ceiling** — Soft monthly cap for AI + hosting in season 1 (~$20 vs ~$200 vs ~$2,000)?
+2. **Budget ceiling (CoS provisional default 2026-10-02)** — Active season-1 envelope is Family H2 year-one cash **~$50–150**. Club bands (~$200 soft monthly / ~$2k monthly) are **deferred** future scenarios, not season-1 targets. See [cost-framing.md](./cost-framing.md).
 3. **Player ID bar** — Is manual tagging OK for v0 (“my kid” via roster confirm)?
 4. **Delivery UX** — Stream-in-browser day 1 vs downloadable MP4 / timestamp list?
 5. **Privacy** — Confirm face biometrics off-limits; any school/club rules or data residency for minor athlete video?
@@ -261,7 +264,7 @@ Prioritized from the research brief:
 9. **Source format** — Phone vs camcorder; 1080p60 vs 4K; average GB/game?
 10. **Clip accuracy** — Keyframe-snapped vs frame-accurate re-encode acceptable?
 11. **Retention** — Keep every game forever, or rolling N seasons?
-12. **Upload path** — Parent phone from gym Wi-Fi vs home after game? Local NVIDIA GPU available overnight?
+12. **Upload path / GPU (CoS provisional default 2026-10-02)** — Plan **Modal-first** until `xoondev001` is online and `nvidia-smi` confirms a usable GPU. Prefer home NVIDIA if/when found (including on `xoondev001` or another home box). Remaining: who uploads (gym Wi-Fi vs home after game)?
 13. **Auth defaults** — Confirm private-by-default, no public share links in v0, and signed URL TTL (Proposed: 30 minutes within 15–60)?
 
 ---
@@ -269,7 +272,8 @@ Prioritized from the research brief:
 ## References
 
 - Research brief: `/workspace/video-highlighter-research-brief.md`
-- ADRs: [adrs/README.md](./adrs/README.md)
+- Season-1 cost envelope: [cost-framing.md](./cost-framing.md)
+- ADRs: [adrs/README.md](./adrs/README.md) — runtime: [adrs/0005-runtime-and-hosting.md](./adrs/0005-runtime-and-hosting.md)
 - Product ideation: [github.com/llevintza/video-highlighter](https://github.com/llevintza/video-highlighter)
 - Vendor pricing / docs cited in ADRs (snapshots ~2026-10-01)
 
